@@ -14,7 +14,7 @@
 pip install virtualenv
 ```
 
-1. **Create virtual environment**
+#### 1. **Create virtual environment**
 
 Mac
 ```
@@ -26,7 +26,7 @@ Windows
 python -m venv myenv
 ```
 
-2. Activate virtual environment
+#### 2. Activate virtual environment
 
 Mac
 ```
@@ -39,7 +39,7 @@ source myenv/Scripts/activate
 ```
 
 
-3. Install required libraries & dependancies 
+#### 3. Install required libraries & dependancies 
 ```
 pip install -r requirements.txt
 ```
