@@ -17,6 +17,14 @@ def jiwer_transform(transcription):
     jiwer.RemoveWhiteSpace(replace_by_space=True)])
     return transformation(transcription)
 
+def seconds_to_srt_time(seconds):
+    """Convert seconds to SRT time format: HH:MM:SS,mmm."""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    milliseconds = int((seconds - int(seconds)) * 1000)
+    return f"{hours:02}:{minutes:02}:{secs:02},{milliseconds:03}"
+
 def transcribe_audio(audio_path, output_srt, output_csv):
     # Transcribe audio to text
     model = whisper.load_model("tiny") # whichever model you choose (or custom one)
@@ -25,11 +33,13 @@ def transcribe_audio(audio_path, output_srt, output_csv):
 
     # Saving to SRT file
     with open(output_srt, "w", encoding="utf-8") as f:
-        for segment in result["segments"]:
-            start = segment["start"]
-            end = segment["end"]
+       for i, segment in enumerate(result["segments"], start=1):
+            start_time = seconds_to_srt_time(segment["start"])
+            end_time = seconds_to_srt_time(segment["end"])
             subtitle = segment["text"]
-            f.write(f"{start:.2f} --> {end:.2f}\n{subtitle}\n\n")
+            f.write(f"{i}\n")
+            f.write(f"{start_time} --> {end_time}\n")
+            f.write(f"{subtitle}\n\n")
     print(f"Subtitles saved at: {output_srt}")
 
     # Saving to CSV file
