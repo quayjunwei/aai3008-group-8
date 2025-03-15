@@ -2,7 +2,8 @@ import streamlit as st
 import os
 import shutil
 import csv
-from asr.asr_processing import ensure_dir, extract_audio, transcribe_audio, embed_subtitles
+from asr.asr_processing import ensure_dir, extract_audio, transcribe_audio
+from transcript.transcript_processing import embed_subtitles
 
 # Create directories
 script_dir = os.path.dirname(os.path.abspath(__file__))
