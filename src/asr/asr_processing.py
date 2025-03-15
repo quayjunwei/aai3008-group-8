@@ -6,6 +6,27 @@ import ffmpeg
 import shutil
 from pathlib import Path
 
+LANGUAGE_MAP = {
+    'en': 'English',
+    'es': 'Spanish',
+    'fr': 'French',
+    'de': 'German',
+    'zh': 'Chinese',
+    'ja': 'Japanese',
+    'it': 'Italian',
+    'ru': 'Russian',
+    'pt': 'Portuguese',
+    'ko': 'Korean',
+    'ar': 'Arabic',
+    'hi': 'Hindi',
+    'tr': 'Turkish',
+    'nl': 'Dutch',
+    'sv': 'Swedish',
+    'pl': 'Polish',
+    'id': 'Indonesian',
+    'uk': 'Ukrainian'
+}
+
 def ensure_dir(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -32,7 +53,8 @@ def transcribe_audio(audio_path, output_srt, output_csv):
         result = model.transcribe(audio_path)
         
         # Add language detection
-        detected_lang = result.get("language", "Unknown").capitalize()
+        lang_code = result.get("language", "Unknown").lower()
+        detected_lang = LANGUAGE_MAP.get(lang_code, f"Unknown ({lang_code})")
 
         with open(output_srt, "w", encoding="utf-8") as f:
             for i, segment in enumerate(result["segments"], start=1):
