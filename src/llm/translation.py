@@ -5,6 +5,7 @@ import torch
 import faiss
 from sentence_transformers import SentenceTransformer
 from transformers import pipeline
+from keybert import KeyBERT
 
 # Ensure sentencepiece is installed
 try:
@@ -44,6 +45,44 @@ def set_wikipedia_language(source_lang):
     wikipedia.set_lang(wiki_code)
     print(f"Set Wikipedia language to: {wiki_code} (based on detected language: {source_lang})")
 
+# Extract keywords from subtitles
+def extract_topics_from_subtitles(input_srt, source_lang, top_n=3): # top_n=3 means we want to extract 3 keywords from the subtitles
+    # Read the subtitles from the SRT file
+    subtitle_text = ""
+    with open(input_srt, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+        for i in range(len(lines)):
+            if lines[i].strip().isdigit() and i + 2 < len(lines):
+                subtitle_text += lines[i + 2].strip() + " "
+
+    if not subtitle_text:
+        print("No subtitle text found for keyword extraction.")
+        # Fallback to generic topics
+        return ["Mathematics", "Education"] if source_lang == "English" else ["Mathematik", "Bildung"] # fallback topics set to Mathematics and Education (can be changed or removed)
+
+    # Initialize KeyBERT with a multilingual model
+    kw_model = KeyBERT(model='paraphrase-multilingual-MiniLM-L12-v2')
+
+    # Extract keywords
+    keywords = kw_model.extract_keywords(
+        subtitle_text,
+        keyphrase_ngram_range=(1, 2),  # Extract 1-2 word phrases (can be changed)
+        stop_words=None,  # Let KeyBERT handle stop words for the language
+        top_n=top_n,
+        diversity=0.5  # Ensure diverse keywords
+    )
+
+    # Extract just the keywords (not their scores)
+    topics = [keyword[0] for keyword in keywords]
+    print(f"Extracted topics from subtitles: {topics}")
+
+    # If no keywords are extracted, fall back to generic topics (again, can be changed or removed)
+    if not topics:
+        print("No keywords extracted. Using fallback topics.")
+        topics = ["Mathematics", "Education"] if source_lang == "English" else ["Mathematik", "Bildung"]
+
+    return topics
+
 # Fetch content from Wikipedia
 def fetch_wikipedia_content(topics, num_sentences=10):
     corpus = []
@@ -66,7 +105,7 @@ def build_rag_database(corpus):
     print("Encoding embeddings...")
     embeddings = embedding_model.encode(corpus, convert_to_tensor=True, device=device)
     print("Moving embeddings to CPU for FAISS...")
-    embeddings = embeddings.cpu().numpy()  # Ensure CPU compatibility
+    embeddings = embeddings.cpu().numpy()
     dimension = embeddings.shape[1]
     print(f"Creating FAISS index with dimension {dimension}...")
     index = faiss.IndexFlatL2(dimension)
@@ -76,6 +115,7 @@ def build_rag_database(corpus):
 
 # Translate subtitle with RAG
 def translate_with_rag(subtitle, source_lang, target_lang, k=3):
+    print(f"Translating '{subtitle}' from {source_lang} to {target_lang}")
     # Retrieve similar examples using RAG
     print("Encoding query embedding...")
     query_embedding = embedding_model.encode([subtitle], convert_to_tensor=True, device=device)
@@ -110,21 +150,31 @@ def translate_with_rag(subtitle, source_lang, target_lang, k=3):
     language_models = {
         "en": f"Helsinki-NLP/opus-mt-{source_code}-en",
         "es": f"Helsinki-NLP/opus-mt-{source_code}-es",
-        "fr": f"Helsinki-NLP/opus-mt-{source_code}-fr"
+        "fr": f"Helsinki-NLP/opus-mt-{source_code}-fr",
+        "de": f"Helsinki-NLP/opus-mt-{source_code}-de"
     }
 
     if target_lang not in language_models:
         print(f"Unsupported target language: {target_lang}. Supported languages: {list(language_models.keys())}")
         return subtitle
 
-    # Load the translation model
+    print(f"Loading model for {target_lang} from {language_models[target_lang]}...")
     try:
-        translator = pipeline("translation", model=language_models[target_lang], device=-1)  # -1 forces CPU
+        translator = pipeline("translation", model=language_models[target_lang], device=-1)
+        print("Model loaded successfully.")
     except Exception as e:
         print(f"Error loading translation model for {source_lang} to {target_lang}: {str(e)}")
-        return subtitle
+        try:
+            from transformers import MarianTokenizer, MarianMTModel
+            model_name = language_models[target_lang]
+            tokenizer = MarianTokenizer.from_pretrained(model_name)
+            model = MarianMTModel.from_pretrained(model_name)
+            translator = lambda x: tokenizer.decode(model.generate(**tokenizer(x, return_tensors="pt"))[0], skip_special_tokens=True)
+            print("Fallback model loaded successfully.")
+        except Exception as e2:
+            print(f"Fallback failed: {str(e2)}. Returning original text.")
+            return subtitle
 
-    # Build prompt with retrieved examples (for future use with more advanced models)
     prompt = f"""
     Translate the following {source_lang} subtitle into {target_lang.upper()}. Maintain the educational meaning and context.
     Here are some similar examples for reference (in {source_lang}):
@@ -135,14 +185,14 @@ def translate_with_rag(subtitle, source_lang, target_lang, k=3):
     Subtitle to translate: "{subtitle}"
     """
 
-    # Translate the subtitle
+    print("Performing translation...")
     try:
-        translation = translator(subtitle)[0]['translation_text']
+        translation = translator(subtitle)[0]['translation_text'] if callable(getattr(translator, 'predict', None)) else translator(subtitle)
+        print(f"Translated to: {translation}")
+        return translation
     except Exception as e:
         print(f"Translation error for subtitle '{subtitle}': {str(e)}")
         return subtitle
-
-    return translation
 
 # Process SRT file with translation
 index = None
@@ -150,7 +200,9 @@ corpus = None
 
 def process_srt(input_srt, output_srt, source_lang, target_lang):
     set_wikipedia_language(source_lang)
-    topics = ["Vector (mathematics)", "Linear algebra", "Mathematics"] if source_lang == "English" else ["Vektor (Mathematik)", "Lineare Algebra", "Grundlagen der Mathematik"]
+    # Extract topics from subtitles
+    print("Extracting topics from subtitles...")
+    topics = extract_topics_from_subtitles(input_srt, source_lang, top_n=3)
     print("Fetching Wikipedia content...")
     global corpus
     corpus = fetch_wikipedia_content(topics)
