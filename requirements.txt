@@ -3,3 +3,10 @@ openai-whisper
 jiwer
 ffmpeg-python
 pydub
+wikipedia
+sentence-transformers
+faiss-cpu
+numpy
+transformers
+sentencepiece
+torch
