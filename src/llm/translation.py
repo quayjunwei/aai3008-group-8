@@ -6,17 +6,7 @@ import faiss
 from sentence_transformers import SentenceTransformer
 from transformers import pipeline
 from keybert import KeyBERT
-
-# Device setup
-def get_device():
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-        print(f"Using GPU: {torch.cuda.get_device_name(0)}")
-    else:
-        device = torch.device("cpu")
-        print("Using CPU")
-    return device
-
+from asr.asr_processing import get_device
 
 # Ensure sentencepiece is installed
 try:

@@ -102,17 +102,23 @@ with col1:
         display_lang = st.session_state.detected_lang if st.session_state.selected_lang == "auto-detect" else st.session_state.selected_lang
         st.markdown(f"**{lang_source} Language:** {display_lang or 'Unknown'}")
         
-        # Download buttons
+        download_col1, download_col2, download_col3 = st.columns(3)
+
         if st.session_state.output_video_path and os.path.exists(st.session_state.output_video_path):
             with open(st.session_state.output_video_path, "rb") as f:
-                st.download_button("Download Subtitled Video", f, "video_with_subtitles.mp4")
+                with download_col1:
+                    st.download_button("Download Subtitled Video", f, "video_with_subtitles.mp4")
+
         if st.session_state.srt_path and os.path.exists(st.session_state.srt_path):
             with open(st.session_state.srt_path, "rb") as f:
-                st.download_button("Download SRT Subtitles", f, "subtitles.srt")
+                with download_col2:
+                    st.download_button("Download SRT Subtitles", f, "subtitles.srt")
+
         if st.session_state.csv_path and os.path.exists(st.session_state.csv_path):
             with open(st.session_state.csv_path, "rb") as f:
-                st.download_button("Download Transcript CSV", f, "subtitles.csv")
-        
+                with download_col3:
+                    st.download_button("Download Transcript CSV", f, "subtitles.csv")
+                
         # Full transcript
         st.subheader("Full Transcript")
         if st.session_state.csv_path and os.path.exists(st.session_state.csv_path):
@@ -198,15 +204,26 @@ with col2:
                 # Display chosen translated language
                 st.markdown(f"**Translated Language:** {st.session_state.target_lang}")
                 
-                # Download buttons
+                translate_col1, translate_col2 = st.columns(2)
+                # Download translated video button
                 with open(st.session_state.translated_video_path, "rb") as f:
-                    st.download_button(
-                        "Download Translated Video", 
-                        f, 
-                        file_name=f"video_translated_{st.session_state.target_lang_code}.mp4",
-                        key="translated_video_download"
-                    )
-                
+                    with translate_col1:
+                        st.download_button(
+                            "Download Translated Video",
+                            f,
+                            file_name=f"video_translated_{st.session_state.target_lang_code}.mp4",
+                            key="translated_video_download"
+                        )
+
+                # Retranslate option button
+                with translate_col2:
+                    if st.button("Translate to Another Language"):
+                        st.session_state.translated = False
+                        st.session_state.translated_video_path = None
+                        st.session_state.target_lang = None
+                        st.session_state.target_lang_code = None
+                        st.rerun()
+
                 # Translated transcript section
                 st.subheader("Translated Transcript")
                 if st.session_state.translated_csv_path and os.path.exists(st.session_state.translated_csv_path):
@@ -226,13 +243,7 @@ with col2:
                 else:
                     st.warning("Translated transcript not available")
 
-                # Retranslate option
-                if st.button("Translate to Another Language"):
-                    st.session_state.translated = False
-                    st.session_state.translated_video_path = None
-                    st.session_state.target_lang = None
-                    st.session_state.target_lang_code = None
-                    st.rerun()
+
             else:
                 st.warning("Translated video not found")
 
