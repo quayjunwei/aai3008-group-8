@@ -1,3 +1,4 @@
+numpy==2.1.3
 streamlit
 openai-whisper
 jiwer
@@ -6,8 +7,8 @@ pydub
 wikipedia
 sentence-transformers
 faiss-cpu
-numpy
 transformers
 sentencepiece
 torch
 keybert
+sacremoses
