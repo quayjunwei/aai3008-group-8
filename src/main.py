@@ -129,37 +129,116 @@ with col1:
             st.warning("Transcript not available. Please process the video first.")
 
 with col2:
-    if st.session_state.processed:
-        # Translation section
-        st.subheader("Translate Subtitles")
-        target_lang = st.selectbox("Translate subtitles to:", ["en", "es", "fr"], index=0, format_func=lambda x: {"en": "English", "es": "Spanish", "fr": "French"}[x])
-        if st.button("Translate and Generate Video"):
-            with st.spinner("Translating and embedding subtitles..."):
-                if st.session_state.srt_path and os.path.exists(st.session_state.srt_path) and st.session_state.detected_lang and st.session_state.input_video_path:
-                    translated_srt = os.path.join(output_dir, f"subtitles_{target_lang}.srt")
-                    source_lang = st.session_state.detected_lang
-                    print(f"Translating from {source_lang} to {target_lang}")
-                    process_srt(st.session_state.srt_path, translated_srt, source_lang, target_lang)
-                    
-                    translated_video = os.path.join(output_dir, f"video_{target_lang}.mp4")
-                    success, error = embed_subtitles(st.session_state.input_video_path, translated_srt, translated_video)
-                    if success:
-                        st.session_state.translated_video_path = translated_video
-                        st.rerun()  # Refresh the UI to update the video display
-                    else:
-                        st.error(f"Translation embedding failed: {error}")
-                else:
-                    st.error("Subtitles, detected language, or input video path not available. Please process the video first.")
+    # Initialize translation state
+    if 'translated' not in st.session_state:
+        st.session_state.translated = False
 
-        # Display translated video if available
-        if st.session_state.translated_video_path and os.path.exists(st.session_state.translated_video_path):
+    if st.session_state.processed:
+        if not st.session_state.translated:
+            # Translation input section
+            st.subheader("Translate Subtitles")
+            target_lang = st.selectbox("Translate subtitles to:", ["en", "es", "fr"], index=0, format_func=lambda x: {"en": "English", "es": "Spanish", "fr": "French"}[x])
+            
+            if st.button("Translate and Generate Video"):
+                with st.spinner("Translating and embedding subtitles..."):
+                    if st.session_state.srt_path and os.path.exists(st.session_state.srt_path):
+                        # Store the target language code in session state for later use
+                        st.session_state.target_lang_code = target_lang
+                        
+                        translated_srt = os.path.join(output_dir, f"subtitles_{target_lang}.srt")
+                        translated_csv = os.path.join(output_dir, f"subtitles_{target_lang}.csv")  # New CSV file
+                        source_lang = st.session_state.detected_lang
+                        
+                        # Process both SRT and CSV
+                        process_srt(st.session_state.srt_path, translated_srt, source_lang, target_lang)
+                        
+                        # Convert translated SRT to CSV
+                        with open(translated_srt, 'r', encoding='utf-8') as srt_file, \
+                             open(translated_csv, 'w', newline='', encoding='utf-8') as csv_file:
+                            writer = csv.writer(csv_file)
+                            writer.writerow(["start", "end", "text"])
+                            
+                            while True:
+                                index = srt_file.readline()
+                                if not index:
+                                    break
+                                times = srt_file.readline().strip()
+                                text = srt_file.readline().strip()
+                                srt_file.readline()  # empty line
+                                
+                                # Parse times
+                                start_end = times.split(" --> ")
+                                start = start_end[0].replace(',', '.')
+                                end = start_end[1].replace(',', '.')
+                                
+                                writer.writerow([start, end, text])
+
+                        translated_video = os.path.join(output_dir, f"video_{target_lang}.mp4")
+                        success, error = embed_subtitles(st.session_state.input_video_path, translated_srt, translated_video)
+                        
+                        if success:
+                            st.session_state.translated_video_path = translated_video
+                            st.session_state.translated_srt_path = translated_srt
+                            st.session_state.translated_csv_path = translated_csv
+                            st.session_state.translated = True
+                            st.session_state.target_lang = {"en": "English", "es": "Spanish", "fr": "French"}[target_lang]
+                            st.rerun()
+                        else:
+                            st.error(f"Translation embedding failed: {error}")
+                    else:
+                        st.error("Subtitles file not available")
+
+        if st.session_state.translated:
+            # Translated results display
             st.subheader("Translated Video")
-            video_placeholder = st.empty()  # Use a placeholder to manage the video display
-            video_placeholder.video(st.session_state.translated_video_path)
-            with open(st.session_state.translated_video_path, "rb") as f:
-                st.download_button(f"Download Video", f, f"video_{target_lang}.mp4")
-        else:
-            st.info("No translated video available yet.")
+            
+            if st.session_state.translated_video_path and os.path.exists(st.session_state.translated_video_path):
+                st.video(st.session_state.translated_video_path)
+                
+                # Display chosen translated language
+                st.markdown(f"**Translated Language:** {st.session_state.target_lang}")
+                
+                # Download buttons
+                with open(st.session_state.translated_video_path, "rb") as f:
+                    st.download_button(
+                        "Download Translated Video", 
+                        f, 
+                        file_name=f"video_translated_{st.session_state.target_lang_code}.mp4",
+                        key="translated_video_download"
+                    )
+                
+                # Translated transcript section
+                st.subheader("Translated Transcript")
+                if st.session_state.translated_csv_path and os.path.exists(st.session_state.translated_csv_path):
+                    try:
+                        with open(st.session_state.translated_csv_path, "r", encoding="utf-8") as f:
+                            reader = csv.DictReader(f)
+                            for row in reader:
+                                # Convert SRT time format to seconds
+                                start_sec = sum(x * float(t) for x, t in zip([3600, 60, 1], row['start'].replace(',', '.').split(':')))
+                                end_sec = sum(x * float(t) for x, t in zip([3600, 60, 1], row['end'].replace(',', '.').split(':')))
+                                
+                                st.write(f"**{start_sec:.1f}s - {end_sec:.1f}s**")
+                                st.write(row['text'])
+                                st.divider()
+                    except Exception as e:
+                        st.error(f"Error loading translated transcript: {str(e)}")
+                else:
+                    st.warning("Translated transcript not available")
+
+                # Retranslate option
+                if st.button("Translate to Another Language"):
+                    st.session_state.translated = False
+                    st.session_state.translated_video_path = None
+                    st.session_state.target_lang = None
+                    st.session_state.target_lang_code = None
+                    st.rerun()
+            else:
+                st.warning("Translated video not found")
+
+    else:
+        st.subheader("Translated Video")
+        st.info("Please process a video first to enable translation")
 
 # Cleanup
 if os.path.exists(os.path.join(output_dir, "extracted_audio.mp3")):

@@ -3,6 +3,7 @@ import csv
 import ffmpeg
 from pydub import AudioSegment
 from pydub.silence import detect_nonsilent
+import torch
 
 LANGUAGE_MAP = {
     'en': 'English',
@@ -25,6 +26,14 @@ LANGUAGE_MAP = {
     'uk': 'Ukrainian'
 }
 
+def get_device():
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+    else:
+        device = torch.device("cpu")
+        print("Using CPU")
+    return device
 
 def extract_audio(video_path, audio_path):
     try:
@@ -44,7 +53,12 @@ def seconds_to_srt_time(seconds):
 
 def transcribe_audio(audio_path, output_srt, output_csv):
     try:
-        model = whisper.load_model("small")
+        device = get_device()
+        model = whisper.load_model("small", device=device)
+
+        # For better GPU utilization
+        torch.backends.cudnn.benchmark = True if device.type == "cuda" else False
+
         result = model.transcribe(audio_path)
         
         # Detect initial silence offset

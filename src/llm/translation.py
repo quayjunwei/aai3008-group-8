@@ -7,15 +7,22 @@ from sentence_transformers import SentenceTransformer
 from transformers import pipeline
 from keybert import KeyBERT
 
+# Device setup
+def get_device():
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+    else:
+        device = torch.device("cpu")
+        print("Using CPU")
+    return device
+
+
 # Ensure sentencepiece is installed
 try:
     import sentencepiece
 except ImportError:
     raise ImportError("Please install sentencepiece: pip install sentencepiece")
-
-# Device setup
-device = torch.device("cpu")
-print(f"Using device: {device}")
 
 # Language code mapping for Wikipedia
 LANGUAGE_TO_WIKI_CODE = {
@@ -99,7 +106,9 @@ def fetch_wikipedia_content(topics, num_sentences=10):
     return corpus
 
 # Build RAG vector store with CPU support
+device = get_device()
 embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', device=device)
+
 
 def build_rag_database(corpus):
     print("Encoding embeddings...")
