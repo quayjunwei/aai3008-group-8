@@ -12,3 +12,8 @@ sentencepiece
 torch
 keybert
 sacremoses
+openai
+requests
+srt
+nltk
+dotenv
