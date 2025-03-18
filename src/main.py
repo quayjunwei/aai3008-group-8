@@ -6,7 +6,6 @@ from transcript.transcript_processing import embed_subtitles
 from llm.translation import process_srt
 from tts.text_to_speech import generate_speech, get_language_code
 
-# IMPORTANT: set_page_config must be the first Streamlit command
 st.set_page_config(page_title="Educational Video Translation System", layout="wide")
 
 # CSS to improve audio player positioning and spacing
