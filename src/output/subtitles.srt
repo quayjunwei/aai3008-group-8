@@ -1,84 +1,88 @@
 1
-00:00:00,000 --> 00:00:10,108
- Rechnen mit Vektoren und die Grundlagen. Also ihr habt sowas wie A-Vektor, gleich 1, 2, 1 und den B-Vektor gleich 0, 0, 4.
+00:00:02,459 --> 00:00:10,259
+mit Vektoren und die Grundlagen. Also ihr habt sowas wie A-Vektor gleich 1, 2, 1 und den B-Vektor
 
 2
-00:00:10,108 --> 00:00:18,987
- Ihr seht bei beiden Vektoren, ihr habt drei Komponenten, das heißt ihr könnt diese beiden Vektoren zum Beispiel addieren.
+00:00:10,259 --> 00:00:19,798
+gleich 0, 0, 4. Ihr seht bei beiden Vektoren, ihr habt drei Komponenten, das heißt, ihr könnt diese
 
 3
-00:00:18,987 --> 00:00:26,987
- Das heißt A-Vektor plus B-Vektor wäre 1, 2, 1 plus 0, 0, 0.
+00:00:19,798 --> 00:00:29,859
+beiden Vektoren zum Beispiel addieren. Das heißt, A-Vektor plus B-Vektor wäre 1, 2, 1 plus 0, 0, 0.
 
 4
-00:00:26,987 --> 00:00:37,987
- 0, 0, 4 ist gleich 1 plus 0, jeweils pro Komponente ist 1, 2 plus 0 ist 2 und 1 plus 4 ist 5.
+00:00:29,858 --> 00:00:41,899
+0, 0, 4 ist gleich 1 plus 0, jeweils pro Komponente ist 1, 2 plus 0 ist 2 und 1 plus 4 ist 5. Und das
 
 5
-00:00:37,987 --> 00:00:43,987
- Und es ist ähnlich wie ich auch schon mal Grundlagen gemacht habe, zum Beispiel für Rechnen mit Potenzen,
+00:00:41,899 --> 00:00:46,819
+ist ähnlich, wie ich auch schon mal Grundlagen gemacht habe, zum Beispiel für Rechnen mit
 
 6
-00:00:43,987 --> 00:00:49,987
- wo man eben Euro und Euro zusammenrechnen kann, aber nicht Äpfel und Nürnchen.
+00:00:46,819 --> 00:00:54,659
+Potenzen, wo man eben Euro und Euro zusammenrechnen kann, aber nicht Äpfel und Birnen. Wenn ihr jetzt
 
 7
-00:00:49,987 --> 00:00:58,987
- Wenn ihr jetzt ein Vektor hättet wie C-Vektor gleich 1, 0, 1, 4, dann habt ihr hier vier Komponenten.
+00:00:54,659 --> 00:01:02,939
+einen Vektor hättet wie C-Vektor gleich 1, 0, 1, 4, dann habt ihr hier vier Komponenten. Ihr könnt
 
 8
-00:00:58,987 --> 00:01:02,987
- Ihr könnt jetzt zum Beispiel nicht B-Vektor plus C-Vektor rechnen.
+00:01:02,939 --> 00:01:10,099
+zum Beispiel nicht B-Vektor plus C-Vektor rechnen. Was ihr mit jedem Vektor machen könnt, ist, ihr
 
 9
-00:01:02,987 --> 00:01:09,987
- Was ihr mit jedem Vektor machen könnt, ist ihr könnt ihn mit einer Zahl multiplizieren.
+00:01:10,099 --> 00:01:15,539
+könnt ihn mit einer Zahl multiplizieren. Also wenn ihr zum Beispiel berechnen sollt, rechnet doch
 
 10
-00:01:09,987 --> 00:01:20,987
- Also wenn ihr zum Beispiel berechnen sollt, rechnet doch mal 10 mal C-Vektor, dann habt ihr 10 mal, C-Vektor ist 1, 0, 1, 4.
+00:01:15,539 --> 00:01:25,859
+mal 10 mal C-Vektor, dann habt ihr 10 mal, C-Vektor ist 1, 0, 1, 4 und das auch wieder pro Komponente
 
 11
-00:01:20,987 --> 00:01:29,987
- Und das auch wieder pro Komponente wäre 10, 0, 10, 40. Also Zahl mal einem Vektor.
+00:01:25,859 --> 00:01:37,338
+wäre 10, 0, 10, 40. Also Zahl mal einem Vektor. Genauso ist es natürlich dann vom Subtrahieren,
 
 12
-00:01:29,987 --> 00:01:33,987
- Genauso ist es natürlich dann vom Subtrahirren.
+00:01:37,338 --> 00:01:43,739
+also wenn ihr jetzt rechnen müsstet A-Vektor minus B-Vektor, dann hättet ihr entsprechend 1, 2, 1
 
 13
-00:01:33,987 --> 00:01:43,987
- Also wenn ihr jetzt rechnen müsstet A-Vektor, minus B-Vektor, dann hättet ihr entsprechend 1, 2, 1, minus 0, 0, 4 geht,
+00:01:43,739 --> 00:01:55,099
+minus 0, 0, 4 geht. Von der Anzahl her der Komponenten 1 minus 0 ist 1, 2 minus 0 ist 2 und 1 minus 4,
 
 14
-00:01:43,987 --> 00:01:55,987
- sondern der Anzahl her der Komponenten 1, minus 0 ist 1, 2, minus 0 ist 2 und 1, minus 4, natürlich auch Vorzeichen aufpassen, ist minus 3.
+00:01:55,099 --> 00:02:02,699
+natürlich auf Vorzeichen aufpassen, ist minus 3. Das sind eigentlich auch schon so mit die wichtigsten
 
 15
-00:01:56,987 --> 00:02:03,987
- Das sind eigentlich auch schon so mit die wichtigsten Grundlagen, wenn es dann weiter geht zum Thema Parameterform einer gerade,
+00:02:02,699 --> 00:02:08,378
+Grundlagen. Wenn es dann weiter geht zum Thema Parameterform einer geraden Parameterform einer
 
 16
-00:02:03,987 --> 00:02:08,987
- Parameterform einer ebenen Richtungsvektoren ausrechnen, wo es noch darum gehen wird.
+00:02:08,378 --> 00:02:14,259
+Ebene, Richtungsvektoren ausrechnen, wo es noch darum gehen wird, dazu habe ich einzelne Videos
 
 17
-00:02:08,987 --> 00:02:18,987
- Dazu habe ich einzelne Videos gemacht, pack ich auch in die Playlist Grundlagen, sowohl rechnen mit Vektoren als auch Punkte ablesen.
+00:02:14,259 --> 00:02:21,498
+gemacht, packe ich auch in die Playlist Grundlagen, sowohl Rechner mit Vektoren als auch Punkte
 
 18
-00:02:18,987 --> 00:02:26,987
- Im Raum zum Beispiel ist auch, also in 3D ist es sehr, sehr beliebt, dass ihr sowas habt wie ihr multipliziert Vektoren,
+00:02:21,498 --> 00:02:27,098
+ablesen. Im Raum zum Beispiel ist auch, also in 3D ist es sehr sehr beliebt, dass ihr so etwas habt,
 
 19
-00:02:26,987 --> 00:02:32,987
- da seid ihr bei einem Skalaprodukt, dann habt ihr ihr noch eine spezielle Schreibweise, wenn es um ein Kreuzprodukt geht,
+00:02:27,098 --> 00:02:32,939
+wie ihr multipliziert Vektoren, da seid ihr bei einem Skalarprodukt, dann habt ihr ja noch eine
 
 20
-00:02:32,987 --> 00:02:38,987
- das kommt aber thematisch, wenn es überhaupt kommt erst später, wenn ihr ein bisschen tiefer in die Materie einsteigt.
+00:02:32,938 --> 00:02:38,858
+spezielle Schreibweise, wenn es um ein Kreuzprodukt geht, das kommt aber thematisch, wenn es überhaupt
 
 21
-00:02:38,987 --> 00:02:46,987
- Und wenn ihr so ein Grundkonstrund habt, dann kommt ihr eigentlich easy durch das Thema durch und das Rechnen sollte euch nicht schwer fallen.
+00:02:38,858 --> 00:02:44,019
+kommt erst später, wenn ihr ein bisschen tiefer in die Materie einsteigt und wenn ihr so einen
+
+22
+00:02:44,019 --> 00:02:47,978
+Grundkonstrukt habt, dann kommt ihr eigentlich easy durch das Thema durch.
 
