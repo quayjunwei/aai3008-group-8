@@ -98,7 +98,7 @@ with col1:
             if st.button("Generate Video with Subtitles"):
                 with st.spinner("Processing video..."):
                     # Processing pipeline
-                    audio_path = os.path.join(output_dir, "extracted_audio.mp3")
+                    audio_path = os.path.join(output_dir, "extracted_audio.wav")
                     srt_path = os.path.join(output_dir, "subtitles.srt")
                     csv_path = os.path.join(output_dir, "subtitles.csv")
                     output_video_path = os.path.join(

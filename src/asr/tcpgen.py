@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import WhisperTokenizer
+from typing import List
 
 class TrieNode:
     def __init__(self):
@@ -47,27 +48,16 @@ class Trie:
 
 class TCPGen(nn.Module):
     def __init__(self, biasing_files: list, tokenizer=WhisperTokenizer, decoder_state_dim=256, embedding_dim=64):
-        """
-        Initializes the TCPGen module.
-        
-        Parameters:
-          biasing_files: List of file paths containing biasing vocabulary.
-          decoder_state_dim: Dimension of the decoder state vector.
-          embedding_dim: Dimension for learned token embeddings.
-        """
         super(TCPGen, self).__init__()
         self.trie = Trie()
         self.tokenizer = tokenizer
-        self.biasing_words = set()
+        self.biasing_subword_to_idx = {}
         self._load_biasing_lists(biasing_files)
         self.decoder_state_dim = decoder_state_dim
         self.embedding_dim = embedding_dim
 
-        # Build a mapping from biasing words to indices (sorted for consistency)
-        self.biasing_word_to_idx = {word: i for i, word in enumerate(sorted(self.biasing_words))}
-
-        # Create an embedding table for biasing words
-        self.bias_embeddings = nn.Embedding(len(self.biasing_words), embedding_dim)
+        num_subwords = len(self.biasing_subword_to_idx)
+        self.bias_embeddings = nn.Embedding(num_subwords, self.embedding_dim)
 
         # Pointer network: takes concatenated [decoder_state, token_embedding] and outputs a score.
         self.pointer_net = nn.Sequential(
@@ -93,82 +83,87 @@ class TCPGen(nn.Module):
                         if word:
                             subword_ids = self.tokenizer(word).input_ids
                             self.trie.insert(subword_ids)
-                            self.biasing_words.add(word)
+                            for subword_id in subword_ids:
+                                # if it’s not already in the dictionary, add it
+                                if subword_id not in self.biasing_subword_to_idx:
+                                    # assign it the next index in the embedding table
+                                    self.biasing_subword_to_idx[subword_id] = len(self.biasing_subword_to_idx)
+
             except Exception as e:
                 print(f"Error reading file {file}: {e}")
 
-    def get_valid_tokens(self, prefix: str) -> list:
-        return self.trie.starts_with(prefix)
+    # def get_valid_tokens(self, prefix_ids: List[int]) -> List[int]:
+    #     return self.trie.starts_with(prefix_ids)
     
-    def get_token_embedding(self, token: str):
-        """
-        Retrieves the learned embedding for a given token.
-        If the token is not in the biasing list, returns a zero vector.
-        """
-        if token in self.biasing_word_to_idx:
-            idx = self.biasing_word_to_idx[token]
+    def _get_bias_embedding(self, token_id: int) -> torch.Tensor:
+        if token_id in self.biasing_subword_to_idx:
+            idx = self.biasing_subword_to_idx[token_id]
             return self.bias_embeddings(torch.tensor(idx, dtype=torch.long))
         else:
-            return torch.zeros(self.embedding_dim)
+            return torch.zeros(self.embedding_dim, device=self.bias_embeddings.weight.device)
 
-    def forward(self, original_logits, prefix, decoder_state, threshold=0.5) -> dict:
-        """
-        Applies the tree-constrained pointer generator to bias the original logits.
-        
-        Parameters:
-          original_logits: Logits of last whisper_model forward pass. (whisper_outputs.logits[:, -1, :])
-          prefix: The current token prefix. (decoder_input_ids)
-          decoder_state (torch.Tensor): The decoder state vector (whisper_outputs.last_hidden_state).
-          threshold: Confidence threshold; if the bias distribution is too low, the original logits are returned.
-          
-        Returns:
-          final_logits: New logits after applying TCPGen biasing.
-        """
-        valid_tokens = list(self.get_valid_tokens(prefix))
-        if not valid_tokens:
-            return original_logits
-        
-        # Obtain embeddings for valid tokens.
-        valid_token_embeddings = []
-        for token in valid_tokens:
-            emb = self.get_token_embedding(token)
-            valid_token_embeddings.append(emb)
-        valid_token_embeddings = torch.stack(valid_token_embeddings)  # (num_valid, embedding_dim)
-        
-        # Expand decoder_state to match the number of valid tokens.
-        decoder_state_expanded = decoder_state.unsqueeze(0).expand(valid_token_embeddings.size(0), -1)  # (num_valid, decoder_state_dim)
-        
-        # Concatenate and compute pointer scores.
-        concat_features = torch.cat([decoder_state_expanded, valid_token_embeddings], dim=1)  # (num_valid, decoder_state_dim+embedding_dim)
-        pointer_logits = self.pointer_net(concat_features).squeeze(-1)  # (num_valid,)
-        pointer_probs = torch.softmax(pointer_logits, dim=0)  # distribution over valid tokens
-        
-        # Build a bias logits distribution over the full vocabulary.
-        tokens = list(original_logits.keys())
-        bias_logits = {}
-        for token in tokens:
-            if token in valid_tokens:
-                idx = valid_tokens.index(token)
-                # Incorporate pointer probability by adding the log probability as a bias.
-                bias_logits[token] = original_logits[token] + torch.log(pointer_probs[idx] + 1e-10).item()
-            else:
-                bias_logits[token] = float('-inf')
-        
-        # Compute generation probability from the decoder state.
-        p_gen = self.p_gen_net(decoder_state).item()
-        
-        # Convert logits to probability distributions.
-        tokens_list = tokens
-        orig_tensor = torch.tensor([original_logits[t] for t in tokens_list])
-        bias_tensor = torch.tensor([bias_logits[t] for t in tokens_list])
-        orig_probs = torch.softmax(orig_tensor, dim=0)
-        bias_probs = torch.softmax(bias_tensor, dim=0)
-        
-        if torch.max(bias_probs).item() < threshold:
-            return original_logits
-        
-        # Interpolate between the bias and original distributions.
-        combined_probs = p_gen * bias_probs + (1 - p_gen) * orig_probs
-        final_logits_tensor = torch.log(combined_probs + 1e-10)
-        final_logits = {token: final_logits_tensor[i].item() for i, token in enumerate(tokens_list)}
+    def forward(self, original_logits, prefix, decoder_state, threshold=0.5) -> torch.Tensor:
+        batch_size, vocab_size = original_logits.size()
+
+        # For each item in batch, get valid next subword IDs.
+        valid_tokens_batch = []
+        for b in range(batch_size):
+            prefix_ids = prefix[b].tolist()
+            valid_ids = self.trie.starts_with(prefix_ids)
+            valid_tokens_batch.append(valid_ids)
+
+        original_probs = F.softmax(original_logits, dim=-1)  # [B, V]
+        pointer_dists = []
+
+        for b in range(batch_size):
+            valid_ids = valid_tokens_batch[b]
+
+            # If no valid tokens, pointer distribution = original distribution
+            if not valid_ids:
+                pointer_dists.append(original_probs[b])
+                continue
+
+            # For each valid token ID, get an embedding & pointer score
+            dec_state_expanded = decoder_state[b].unsqueeze(0).expand(len(valid_ids), -1)
+
+            pointer_scores = []
+            for token_id in valid_ids:
+                token_emb = self._get_bias_embedding(token_id)
+                concat_vec = torch.cat([dec_state_expanded[0], token_emb], dim=-1)
+                score = self.pointer_net(concat_vec)
+                pointer_scores.append(score)
+
+            # Convert pointer scores to a distribution over just valid_ids
+            pointer_scores_tensor = torch.stack(pointer_scores, dim=0).squeeze(-1)
+            pointer_probs = F.softmax(pointer_scores_tensor, dim=0)
+
+            # Scatter those pointer_probs back into a [V]-sized vector
+            pointer_dist = torch.zeros_like(original_probs[b])
+            for i, token_id in enumerate(valid_ids):
+                pointer_dist[token_id] = pointer_probs[i]
+
+            pointer_dists.append(pointer_dist)
+
+        # pointer_dists: list of length B, each a [V] vector
+        pointer_dists = torch.stack(pointer_dists, dim=0)
+
+        # Compute generation probability p_gen from decoder_state
+        # p_gen_net outputs shape [B, 1] in [0,1]
+        p_gen = self.p_gen_net(decoder_state)
+        p_gen = p_gen.expand(-1, vocab_size)
+
+        # Combine pointer distribution & original distribution
+        biased_probs = p_gen * pointer_dists + (1.0 - p_gen) * original_probs
+
+        # If sum of pointer_dist < threshold, revert to original_probs
+        pointer_mass = pointer_dists.sum(dim=-1, keepdim=True)
+        # shape for broadcast: [B,V]
+        final_probs = torch.where(
+            pointer_mass < threshold,
+            original_probs,
+            biased_probs
+        )
+
+        # Convert back to logits for subsequent cross-entropy
+        final_logits = torch.log(final_probs + 1e-8)
         return final_logits

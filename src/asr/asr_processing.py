@@ -2,9 +2,11 @@ import os
 import whisper
 import csv
 import ffmpeg
+from asr.ASRModel import ASRModel
 from pydub import AudioSegment
 from pydub.silence import detect_nonsilent
 import torch
+import torchaudio
 
 # Pair the language codes to their respective language
 LANGUAGE_MAP = {
@@ -41,7 +43,7 @@ def get_device():
 # Using FFmpeg to extract the audio from the video
 def extract_audio(video_path, audio_path):
     try:
-        ffmpeg.input(video_path).output(audio_path, acodec="mp3").run(overwrite_output=True)
+        ffmpeg.input(video_path).output(audio_path, ac=1, ar=16000, acodec="pcm_s16le").run(overwrite_output=True)
         print(f"Audio extracted and saved at: {audio_path}")
         return True, None
     except Exception as e:
@@ -59,7 +61,10 @@ def seconds_to_srt_time(seconds):
 def transcribe_audio(audio_path, output_srt, output_csv):
     try:
         device = get_device()
+
         model = whisper.load_model("small", device=device)
+        # bias_lists = ["asr/MIT8_03SCF16_lec01_300k.txt"]
+        # model = ASRModel(model_name="openai/whisper-tiny", biasing_files=bias_lists)
 
         # Optimize GPU performance
         torch.backends.cudnn.benchmark = True if device.type == "cuda" else False
@@ -84,10 +89,14 @@ def transcribe_audio(audio_path, output_srt, output_csv):
 
         # Export trimmed audio to temporary file
         temp_audio_path = f"trimmed_{os.path.basename(audio_path)}"
-        trimmed_audio.export(temp_audio_path, format="mp3")
+        trimmed_audio.export(temp_audio_path, format="wav", parameters=["-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1"])
 
         # Transcribe trimmed audio
         result = model.transcribe(temp_audio_path)
+
+        # waveform, sr = torchaudio.load(temp_audio_path)
+        # waveform = waveform.squeeze(0)  # shape [time]
+        # result = model.transcribe_with_biasing(waveform)
 
         # Calculate offset to adjust timestamps (convert ms to seconds)
         offset = start_trim / 1000 if nonsilent_ranges else 0
