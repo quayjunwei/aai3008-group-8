@@ -1,7 +1,7 @@
 from transformers import WhisperForConditionalGeneration, WhisperProcessor
 from transformers.generation.logits_process import LogitsProcessor
 import torch
-from asr.TCPGen import TCPGen
+from asr.tcpgen import TCPGen
 
 class TCPGenLogitsProcessor(LogitsProcessor): # currently not using p_gen_net
     def __init__(self, tcpgen):
