@@ -253,9 +253,7 @@ with col2:
 
             if st.button("Translate and Generate Video"):
                 with st.spinner("Translating and embedding subtitles..."):
-                    if st.session_state.srt_path and os.path.exists(
-                        st.session_state.srt_path
-                    ):
+                    if st.session_state.srt_path and os.path.exists(st.session_state.srt_path):
                         # Store the target language code in session state for later use
                         st.session_state.target_lang_code = target_lang
 
@@ -309,14 +307,78 @@ with col2:
                         )
 
                         if success:
-                            st.session_state.translated_video_path = translated_video
+                            # New code to add TTS audio
+                            try:
+                                from pydub import AudioSegment
+                                import subprocess
+                                from io import BytesIO
+
+                                # Read translated CSV
+                                segments = []
+                                with open(translated_csv, 'r', encoding='utf-8') as f:
+                                    reader = csv.DictReader(f)
+                                    for row in reader:
+                                        segments.append({
+                                            'start': row['start'],
+                                            'text': row['text']
+                                        })
+
+                                # Get video duration using ffprobe
+                                def get_video_duration(video_path):
+                                    cmd = [
+                                        'ffprobe', '-v', 'error',
+                                        '-show_entries', 'format=duration',
+                                        '-of', 'default=noprint_wrappers=1:nokey=1', video_path
+                                    ]
+                                    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                    return float(result.stdout.decode().strip())
+
+                                duration = get_video_duration(st.session_state.input_video_path)
+                                silent_audio = AudioSegment.silent(int(duration * 1000))  # in milliseconds
+
+                                # Overlay TTS segments
+                                for seg in segments:
+                                    start_str = seg['start'].replace(",", ".")
+                                    parts = start_str.split(':')
+                                    start_sec = sum(float(p) * 60**i for i, p in enumerate(reversed(parts)))
+                                    start_ms = int(start_sec * 1000)
+
+                                    audio_bytes = generate_speech(seg['text'], lang=target_lang)
+                                    if not audio_bytes:
+                                        continue  # Skip failed segments
+                                    audio = AudioSegment.from_file(BytesIO(audio_bytes), format="mp3")
+                                    silent_audio = silent_audio.overlay(audio, position=start_ms)
+
+                                # Save combined TTS audio
+                                tts_audio_path = os.path.join(output_dir, f"tts_{target_lang}.mp3")
+                                silent_audio.export(tts_audio_path, format="mp3")
+
+                                # Merge TTS audio with translated video
+                                final_video_path = os.path.join(output_dir, f"video_{target_lang}_tts.mp4")
+                                cmd = [
+                                    'ffmpeg', '-i', translated_video,
+                                    '-i', tts_audio_path,
+                                    '-c:v', 'copy', '-c:a', 'aac',
+                                    '-map', '0:v', '-map', '1:a',
+                                    '-shortest', '-y', final_video_path
+                                ]
+                                subprocess.run(cmd, check=True)
+
+                                # Update session state with new video
+                                st.session_state.translated_video_path = final_video_path
+                            
+                            except Exception as e:
+                                st.error(f"TTS audio merge failed: {str(e)}")
+                                st.stop()
+
+                            # st.session_state.translated_video_path = translated_video
                             st.session_state.translated_srt_path = translated_srt
                             st.session_state.translated_csv_path = translated_csv
                             st.session_state.translated = True
                             st.session_state.target_lang = {
-                                "en": "English",
-                                "es": "Spanish",
-                                "fr": "French",
+                                 "en": "English",
+                                 "es": "Spanish",
+                                 "fr": "French",
                             }[target_lang]
                             st.rerun()
                         else:
