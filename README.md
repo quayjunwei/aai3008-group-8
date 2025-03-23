@@ -44,6 +44,14 @@ source myenv/Scripts/activate
 pip install -r requirements.txt
 ```
 
+#### 4. Make sure you have OPENAI API Key located in
+```
+├── src/
+│   ├── llm/.env               # API KEY LOCATION
+
+OPENAI_API_KEY=INSERT YOUR API KEY HERE!
+```
+
 ## Project Organisation
 ```
 ├── src/                       # Source code
