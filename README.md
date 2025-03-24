@@ -20,7 +20,7 @@ Subtitle embedding is handled using FFmpeg:
 ffmpeg -i [video_path] -vf subtitles=[subtitle_path] -c:a copy [output_path]
 ```
 
-This creates a video file with hard-coded subtitles while preserving the original audio quality.
+This creates a video file with subtitles while preserving the original audio quality.
 
 
 
@@ -33,13 +33,6 @@ This creates a video file with hard-coded subtitles while preserving the origina
    - Fallback to Helsinki-NLP models when API fails or for specific language pairs
 
 4. **Text-to-Speech (TTS)**: Converts translated text back to speech using Google's gTTS (Google Text-to-Speech) API with support for multiple languages.
-
-The TTS module uses Google's gTTS API with support for multiple languages:
-
-```python
-from gtts import gTTS
-tts = gTTS(text=text, lang=lang_code, slow=False)
-```
 
 5. **Streamlit UI**: Provides a user-friendly interface for uploading videos, displaying them, and overlaying translated text.
 
