@@ -144,9 +144,13 @@ streamlit run src/main.py
 A sample educational video in German can be downloaded [here](https://drive.google.com/file/d/1YGQOHM4f5TCwZB2N2JGsjmGGoqNRiktd/view?usp=sharing) 
 
 2. **Select Languages**: Choose the source language of the video and the target language for translation. The system supports multiple languages including:
-   - English, Spanish, French, German, Chinese, Japanese
-   - Italian, Russian, Portuguese, Korean, Arabic, Hindi
-   - Turkish, Dutch, Swedish, Polish, Indonesian, Ukrainian
+   - Auto-detect
+   - English
+   - Spanish
+   - French
+   - German
+   - Chinese
+   - Japanese
 
 3. **Process Video**: Click the "Process" button to start the translation pipeline:
    - The system transcribes the audio using the OpenAI Whisper ASR model
